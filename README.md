@@ -6,6 +6,16 @@ A Python options-analytics application that retrieves live option-chain data, ca
 
 The engine is designed as an exploratory derivatives-analysis tool. It converts live market quotes into a cleaned option dataset, fits each expiration independently, derives model-fitted implied volatilities, and presents the results through interactive Plotly visualizations and strike-level comparison tables.
 
+## Sample Outputs
+
+### 3D Implied Volatility Surface
+
+![3D implied volatility surface](images/iv_surface_3d.png)
+
+### Expiration Slice
+
+![Implied volatility expiration slice](images/expiration_slice.png)
+
 ## Features
 
 - Retrieves live option chains and spot prices through `yfinance`
@@ -87,8 +97,6 @@ implied-volatility-surface/
 ├── .gitignore
 └── images/
 ```
-
-Screenshots of the surface and expiration-slice outputs will be added to the `images/` directory.
 
 ## Limitations
 
