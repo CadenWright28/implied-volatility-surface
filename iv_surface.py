@@ -223,8 +223,8 @@ def build_surface(data: pd.DataFrame, ticker: str) -> go.Figure:
 
     fig = go.Figure()
 
-    # A real surface needs variation in both strike and expiration. If the
-    # chain is too small, showing the actual points is better than forcing it.
+    # If there are enough strikes and expirations, interpolate between the
+    # observed contracts to make the plane easier to read.
     if len(np.unique(x)) > 1 and len(np.unique(y)) > 1:
         x_grid = np.linspace(x.min(), x.max(), 70)
         y_grid = np.linspace(y.min(), y.max(), 55)
@@ -249,7 +249,7 @@ def build_surface(data: pd.DataFrame, ticker: str) -> go.Figure:
         )
     )
     fig.update_layout(
-        title=f"{ticker.upper()} implied volatility surface",
+        title=f"{ticker.upper()} implied volatility plane",
         scene={
             "xaxis_title": "Strike / Spot",
             "yaxis_title": "Days to expiration",
@@ -345,8 +345,19 @@ def main() -> None:
     print("\nNear-ATM contracts:")
     print(comparison_table(data, spot, rate, inputs.side).to_string(index=False))
 
-    build_surface(data, inputs.ticker).show()
-    build_expiration_slice(data, inputs.ticker).show()
+    surface = build_surface(data, inputs.ticker)
+    iv_slice = build_expiration_slice(data, inputs.ticker)
+
+    surface_file = f"{inputs.ticker.lower()}_iv_plane.html"
+    slice_file = f"{inputs.ticker.lower()}_iv_slice.html"
+    surface.write_html(surface_file)
+    iv_slice.write_html(slice_file)
+
+    print(f"\nSaved {surface_file}")
+    print(f"Saved {slice_file}")
+
+    surface.show()
+    iv_slice.show()
 
 
 if __name__ == "__main__":
