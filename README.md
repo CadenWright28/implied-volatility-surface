@@ -2,7 +2,7 @@
 
 I built this project to get more comfortable with Black-Scholes and to see how implied volatility changes across strikes and expirations instead of looking at one option at a time.
 
-The script downloads a live option chain, uses market prices to solve for implied volatility, and plots the results as a 3D surface and a single-expiration slice.
+The script downloads a live option chain, uses market prices to solve for implied volatility, and plots the results as an interactive 3D IV plane and a single-expiration slice.
 
 ## Why I built it
 
@@ -15,9 +15,20 @@ I understood the idea of implied volatility before I built this, but I wanted to
 - uses the 13-week Treasury yield as a simple risk-free-rate input when available
 - calculates mid prices from bid and ask quotes
 - solves Black-Scholes implied volatility contract by contract
-- plots IV against moneyness and days to expiration
+- builds an interactive 3D IV plane across moneyness and days to expiration
 - shows a 2D expiration slice
 - prints a small near-ATM table with Greeks
+- saves both charts as interactive HTML files
+
+## Sample outputs
+
+### IV plane
+
+![3D implied volatility surface](images/iv_surface_3d.png)
+
+### Expiration slice
+
+![Implied volatility expiration slice](images/expiration_slice.png)
 
 ## Run it
 
@@ -34,6 +45,15 @@ python iv_surface.py CLSK 120 calls focused
 
 The last argument controls the moneyness window: `focused`, `standard`, or `wide`.
 
+A run also saves files like:
+
+```text
+clsk_iv_plane.html
+clsk_iv_slice.html
+```
+
+so the charts can be reopened and rotated/zoomed in a browser.
+
 ## Tests
 
 ```bash
@@ -48,6 +68,7 @@ The tests check Black-Scholes call-put parity, implied-volatility inversion, the
 iv_surface.py       data loading, Black-Scholes, IV solving, and charts
 test_iv_engine.py   small deterministic test suite
 requirements.txt
+images/             sample IV plane and slice screenshots
 ```
 
 ## Limits
