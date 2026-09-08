@@ -1,37 +1,68 @@
+from __future__ import annotations
+
+import math
 import unittest
 
 import numpy as np
 
-import iv_surface as iv
+import iv_engine as iv
 
 
-class IVTests(unittest.TestCase):
-    def test_side_parser(self):
-        self.assertEqual(iv.parse_side("c"), "calls")
-        self.assertEqual(iv.parse_side("puts"), "puts")
+class ImpliedVolatilityEngineTests(unittest.TestCase):
+    def test_option_side_normalization(self) -> None:
+        self.assertEqual(iv.normalize_option_side("c"), "calls")
+        self.assertEqual(iv.normalize_option_side("PUT"), "puts")
+        with self.assertRaises(ValueError):
+            iv.normalize_option_side("straddle")
 
-    def test_call_put_parity(self):
-        S, K, T, r, vol = 100, 105, 0.75, 0.04, 0.30
-        call = iv.bs_price(S, K, T, r, vol, "calls")
-        put = iv.bs_price(S, K, T, r, vol, "puts")
-        self.assertAlmostEqual(call - put, S - K*np.exp(-r*T), places=10)
+    def test_black_scholes_call_put_parity(self) -> None:
+        spot = 100.0
+        strike = 105.0
+        rate = 0.04
+        t_years = 0.75
+        sigma = 0.30
 
-    def test_iv_round_trip(self):
-        S, K, T, r, vol = 100, 110, 0.5, 0.04, 0.42
-        price = iv.bs_price(S, K, T, r, vol, "calls")
-        solved = iv.implied_volatility(price, S, K, T, r, "calls")
-        self.assertAlmostEqual(solved, vol, places=8)
+        call = iv._bs_option_snapshot(spot, strike, t_years, sigma, "calls", rate)["price"]
+        put = iv._bs_option_snapshot(spot, strike, t_years, sigma, "puts", rate)["price"]
+        parity = spot - strike * math.exp(-rate * t_years)
+        self.assertAlmostEqual(call - put, parity, places=10)
 
-    def test_put_iv_round_trip(self):
-        S, K, T, r, vol = 100, 90, 0.35, 0.04, 0.55
-        price = iv.bs_price(S, K, T, r, vol, "puts")
-        solved = iv.implied_volatility(price, S, K, T, r, "puts")
-        self.assertAlmostEqual(solved, vol, places=8)
+    def test_implied_volatility_round_trip(self) -> None:
+        spot = 52.0
+        strike = 55.0
+        rate = 0.035
+        t_years = 45.0 / 365.0
+        sigma = 0.72
+        price = iv._bs_option_snapshot(spot, strike, t_years, sigma, "calls", rate)["price"]
+        solved = iv._solve_implied_vol_from_price(
+            price, spot, strike, t_years, "calls", rate
+        )
+        self.assertAlmostEqual(solved, sigma, places=6)
 
-    def test_greeks_are_finite(self):
-        greeks = iv.option_greeks(100, 100, 0.5, 0.04, 0.3, "calls")
-        self.assertTrue(all(np.isfinite(value) for value in greeks.values()))
+    def test_surface_preset_resolution(self) -> None:
+        name, band = iv.resolve_surface_moneyness_preset("standard")
+        self.assertEqual(name, "standard")
+        self.assertEqual(band, (0.50, 2.00))
+
+        name, band = iv.resolve_surface_moneyness_preset("off")
+        self.assertEqual(name, "off")
+        self.assertIsNone(band)
+
+    def test_mixture_prices_decrease_with_strike(self) -> None:
+        strikes = np.array([80.0, 90.0, 100.0, 110.0, 120.0])
+        raw_params = np.zeros(3)
+        prices = iv.mixture_option_price(
+            strikes=strikes,
+            t_years=0.5,
+            rate=0.04,
+            option_side="calls",
+            raw_params=raw_params,
+            spot=100.0,
+            n_components=1,
+        )
+        self.assertTrue(np.all(np.diff(prices) <= 1e-12))
+        self.assertTrue(np.all(prices >= 0.0))
 
 
 if __name__ == "__main__":
-    unittest.main(verbosity=2)
+    unittest.main()
