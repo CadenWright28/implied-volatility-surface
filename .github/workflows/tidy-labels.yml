@@ -1,0 +1,54 @@
+name: tidy-labels
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  tidy:
+    if: github.event.head_commit.message == 'Tidy IV file section labels'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Simplify comments only
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('iv_engine.py')
+          text = path.read_text(encoding='utf-8')
+
+          replacements = {
+              '# ============================================================\n# DEFAULTS / FRONT-AND-CENTER CONTROLS\n# ============================================================': '# Defaults',
+              '# ============================================================\n# VIEW CONTROLS\n# ============================================================': '# View settings',
+              '# ============================================================\n# MINIMAL SANITY CLEANUP + MIXTURE-OF-BLACK-SCHOLES CONTROLS\n# ============================================================': '# Basic quote filters',
+              '# ============================================================\n# MIXTURE-OF-BLACK-SCHOLES ("GMM-STYLE") FIT CONTROLS\n# ============================================================': '# Mixture fit settings',
+              '# ============================================================\n# 2D EXPIRATION SLICE TOOL\n# ============================================================': '# Expiration slice',
+              '# ============================================================\n# INTERACTIVE STRIKE COMPARISON (AFTER SLICE IS BUILT)\n# ============================================================': '# Strike comparison',
+              '# ============================================================\n# REFERENCE PRICING / NO-MOVE DECAY ASSUMPTIONS FOR COMPARISON TABLE\n# ============================================================': '# Rate and comparison assumptions',
+              '# ============================================================\n# INPUT\n# ============================================================': '# Input',
+              '# ============================================================\n# DATA\n# ============================================================': '# Market data',
+              '# ============================================================\n# CLEANING / TRUST CLASSIFICATION\n# ============================================================': '# Cleaning and fit inputs',
+              '# ============================================================\n# SURFACE + VIEW HELPERS\n# ============================================================': '# Surface helpers',
+              '# ============================================================\n# 2D SLICE HELPERS\n# ============================================================': '# Slice helpers',
+              '# ============================================================\n# PLOT\n# ============================================================': '# 3D plot',
+              '# ============================================================\n# SUMMARY\n# ============================================================': '# Console summary',
+              '# ============================================================\n# DOUBLE-CLICK / EXIT HELPERS\n# ============================================================': '# Output and exit helpers',
+              '# ============================================================\n# MAIN\n# ============================================================': '# Main run',
+              '    """\n    Save a full-page responsive HTML so the chart fills the browser window with less clutter.\n    Falls back to a timestamped filename if the target file is locked.\n    """': '    """Save a Plotly chart as a browser-friendly HTML file."""',
+          }
+
+          for old, new in replacements.items():
+              text = text.replace(old, new)
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+          git config user.name "Caden Wright"
+          git config user.email "agentcunderfire@gmail.com"
+          git add iv_engine.py
+          git commit -m "Simplify IV section comments"
+          git push
