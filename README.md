@@ -1,24 +1,10 @@
 # Implied Volatility Surface
 
-I built this project to get more comfortable with Black-Scholes and to see how implied volatility changes across strikes and expirations instead of looking at one option at a time.
+I built this project because I wanted to understand implied volatility across an entire option chain instead of only solving IV for one contract at a time.
 
-The script downloads a live option chain, uses market prices to solve for implied volatility, and plots the results as an interactive 3D IV plane and a single-expiration slice.
+The project pulls live option data, cleans the quotes, fits each expiration, and turns the fitted prices back into implied volatilities. It then shows the result as an interactive 3D IV plane and a 2D expiration slice.
 
-## Why I built it
-
-I understood the idea of implied volatility before I built this, but I wanted to see what it looked like across an actual option chain. The useful part for me was working backward from an option price to volatility and then seeing the smile/skew show up across strike and time.
-
-## What it does
-
-- downloads calls or puts with `yfinance`
-- uses the latest stock price as spot
-- uses the 13-week Treasury yield as a simple risk-free-rate input when available
-- calculates mid prices from bid and ask quotes
-- solves Black-Scholes implied volatility contract by contract
-- builds an interactive 3D IV plane across moneyness and days to expiration
-- shows a 2D expiration slice
-- prints a small near-ATM table with Greeks
-- saves both charts as interactive HTML files
+The full calibration model is still part of the project. I kept it because that was a large part of what I was trying to learn.
 
 ## Sample outputs
 
@@ -30,29 +16,57 @@ I understood the idea of implied volatility before I built this, but I wanted to
 
 ![Implied volatility expiration slice](images/expiration_slice.png)
 
+## What the model does
+
+For each expiration, the program can fit a one-, two-, or three-component mixture of Black-Scholes prices. The fit allows the component weights, forward levels, and volatilities to move so the model can match an observed option chain more closely than a single flat-vol Black-Scholes model.
+
+The calibration uses multiple starting points and constrained optimization. Quote quality and bid-ask spreads affect the weights, and the loss function is made less sensitive to extreme residuals so a few bad quotes do not completely control the fit.
+
+After calibration, the fitted option prices are inverted through a Black-Scholes IV solver. Those fitted IV observations are then used to build the surface.
+
+## What is included
+
+- live option chains and spot prices through `yfinance`
+- calls or puts over a configurable expiration range
+- short-term Treasury rates, with a fallback if the live rate source fails
+- bid, ask, mid, and vendor-IV handling
+- Black-Scholes pricing and IV inversion
+- one- to three-component mixture-of-Black-Scholes calibration by expiration
+- multi-start optimization with `L-BFGS-B` and `Powell`
+- bid-ask-aware weighting and robust residual loss
+- residual-outlier filtering
+- interactive 3D IV surface by moneyness or strike
+- 2D expiration slice with ATM reference
+- strike comparison tables with Greeks and liquidity information
+- projected no-move time-decay calculations
+- optional diagnostic CSV exports
+- interactive HTML graph exports
+
 ## Run it
 
 ```bash
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 python iv_surface.py
 ```
 
-You can also pass the inputs directly:
+You can also pass inputs on the command line:
 
 ```bash
-python iv_surface.py CLSK 120 calls focused
+python iv_surface.py CLSK 120 auto calls focused
 ```
 
-The last argument controls the moneyness window: `focused`, `standard`, or `wide`.
+The program can ask for the ticker, maximum DTE, target expiration slice, calls or puts, and the moneyness view.
 
-A run also saves files like:
+## Outputs
 
-```text
-clsk_iv_plane.html
-clsk_iv_slice.html
-```
+A normal run can produce:
 
-so the charts can be reopened and rotated/zoomed in a browser.
+- an interactive 3D implied-volatility plane
+- an interactive expiration slice
+- strike-level comparison tables in the terminal
+- optional cleaned-contract, fitted-surface, and outlier CSVs
+
+The HTML graphs can be reopened later and rotated or zoomed in the browser.
 
 ## Tests
 
@@ -60,17 +74,18 @@ so the charts can be reopened and rotated/zoomed in a browser.
 python -m unittest test_iv_engine.py
 ```
 
-The tests check Black-Scholes call-put parity, implied-volatility inversion, the option-side parser, and basic Greeks.
+The tests cover option-side parsing, Black-Scholes call-put parity, IV inversion, moneyness presets, and monotonic mixture call prices.
 
 ## Files
 
 ```text
-iv_surface.py       data loading, Black-Scholes, IV solving, and charts
-test_iv_engine.py   small deterministic test suite
+iv_surface.py       small file used to start the program
+iv_engine.py        pricing, calibration, data work, tables, and graphs
+test_iv_engine.py   deterministic model tests
 requirements.txt
-images/             sample IV plane and slice screenshots
+images/             sample IV plane and expiration slice
 ```
 
 ## Limits
 
-This is a learning project, not a production volatility model. It uses a basic Black-Scholes setup with no dividend yield, depends on the quality of Yahoo Finance option quotes, and the plotted surface is an interpolation of observed contracts rather than a fully arbitrage-free calibrated volatility surface.
+This is a learning project, not a production volatility surface. The fit depends heavily on the quality of the option quotes going into it, especially when contracts are illiquid or spreads are wide. Each expiration is fitted separately, so the final surface is not guaranteed to be fully arbitrage-free across both strike and maturity. The surface interpolation is mainly for analysis and visualization, not execution or production pricing.
