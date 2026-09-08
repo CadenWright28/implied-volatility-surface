@@ -22,9 +22,7 @@ except Exception as exc:
     ) from exc
 
 
-# ============================================================
-# DEFAULTS / FRONT-AND-CENTER CONTROLS
-# ============================================================
+# Defaults
 APP_NAME = "IV3D"
 APP_VERSION = "1.0"
 APP_TAG = "iv3d_v1_0"
@@ -53,9 +51,7 @@ OUTPUT_DIR = Path.home() / "AppData" / "Local" / "IVPlaneOutputs"
 AUTO_OPEN_PLANE = True
 AUTO_OPEN_SLICE = True
 
-# ============================================================
-# VIEW CONTROLS
-# ============================================================
+# View settings
 X_AXIS_MODE = "moneyness"            # "strike" or "moneyness"
 SURFACE_USE_MONEYNESS_DISPLAY_BAND = True
 SURFACE_MIN_MONEYNESS_DISPLAY = 0.80
@@ -90,17 +86,13 @@ SLICE_SHOW_GRID = True
 SLICE_GRID_COLOR = "rgba(90, 120, 170, 0.34)"
 SLICE_ZERO_LINE_COLOR = "rgba(180, 180, 180, 0.40)"
 
-# ============================================================
-# MINIMAL SANITY CLEANUP + MIXTURE-OF-BLACK-SCHOLES CONTROLS
-# ============================================================
+# Basic quote filters
 MIN_PRICE_EPS = 1e-8
 MAX_ABS_SPREAD_TO_PRICE_RATIO = 4.0
 MIN_STRIKE_MULTIPLE = 0.20
 MAX_STRIKE_MULTIPLE = 4.00
 
-# ============================================================
-# MIXTURE-OF-BLACK-SCHOLES ("GMM-STYLE") FIT CONTROLS
-# ============================================================
+# Mixture fit settings
 MIXTURE_COMPONENTS = 3
 FIT_PRICE_SOURCE = "auto"                 # auto / mid / last
 FIT_USE_BID_ASK_WEIGHTS = True
@@ -132,9 +124,7 @@ FIT_DENSE_SLICE_POINTS = 220
 
 FITTED_MODELS: dict[str, dict[str, object]] = {}
 
-# ============================================================
-# 2D EXPIRATION SLICE TOOL
-# ============================================================
+# Expiration slice
 MAKE_SLICE_FIGURE = True
 SLICE_TARGET = DEFAULT_SLICE_TARGET
 SLICE_SHOW_EXCLUDED_POINTS = True
@@ -145,16 +135,12 @@ SLICE_MARK_SPOT_LINE = True
 
 
 
-# ============================================================
-# INTERACTIVE STRIKE COMPARISON (AFTER SLICE IS BUILT)
-# ============================================================
+# Strike comparison
 COMPARE_AFTER_SLICE = True
 COMPARE_SAVE_CSV = False
 COMPARE_NEAREST_TOLERANCE = 0.26   # max absolute strike difference when auto-matching nearest
 
-# ============================================================
-# REFERENCE PRICING / NO-MOVE DECAY ASSUMPTIONS FOR COMPARISON TABLE
-# ============================================================
+# Rate and comparison assumptions
 REFERENCE_RISK_FREE_RATE = 0.04    # fallback flat rate if live Treasury fetch fails
 USE_LIVE_TREASURY_RATES = True
 TREASURY_REQUEST_TIMEOUT_SEC = 12
@@ -958,9 +944,7 @@ def interactive_slice_compare_loop(
         print()
 
 
-# ============================================================
-# INPUT
-# ============================================================
+# Input
 
 def normalize_option_side(value: str) -> str:
     value = (value or "").strip().lower()
@@ -1116,9 +1100,7 @@ def get_inputs_from_user() -> tuple[str, int, str, str, str]:
     return ticker, max_dte, slice_target, option_side, surface_preset
 
 
-# ============================================================
-# DATA
-# ============================================================
+# Market data
 def get_spot_price(ticker_obj: yf.Ticker) -> float:
     fast_info = getattr(ticker_obj, "fast_info", {}) or {}
     spot = (
@@ -1211,9 +1193,7 @@ def fetch_option_points(ticker_symbol: str, max_dte: int) -> tuple[pd.DataFrame,
     return raw, spot
 
 
-# ============================================================
-# CLEANING / TRUST CLASSIFICATION
-# ============================================================
+# Cleaning and fit inputs
 def _sigmoid(x: np.ndarray | float) -> np.ndarray | float:
     return 1.0 / (1.0 + np.exp(-np.asarray(x)))
 
@@ -1842,9 +1822,7 @@ def fit_all_expirations_with_gmm(all_df: pd.DataFrame) -> tuple[pd.DataFrame, pd
     return surface_df, outliers, model_cache
 
 
-# ============================================================
-# SURFACE + VIEW HELPERS
-# ============================================================
+# Surface helpers
 def _get_x_series(df: pd.DataFrame) -> pd.Series:
     return df["moneyness"] if X_AXIS_MODE == "moneyness" else df["strike"]
 
@@ -1991,9 +1969,7 @@ def make_hover_text(df: pd.DataFrame, include_reason: bool = False) -> list[str]
     return texts
 
 
-# ============================================================
-# 2D SLICE HELPERS
-# ============================================================
+# Slice helpers
 def resolve_slice_expiration(all_df: pd.DataFrame, slice_target: str) -> str:
     expirations = sorted(all_df["expiration"].astype(str).unique().tolist())
     if not expirations:
@@ -2194,9 +2170,7 @@ def make_slice_figure(all_df: pd.DataFrame, plane_df: pd.DataFrame, faint_df: pd
     return fig
 
 
-# ============================================================
-# PLOT
-# ============================================================
+# 3D plot
 def make_figure(plane_df: pd.DataFrame, faint_df: pd.DataFrame, spot: float, ticker_symbol: str, max_dte: int) -> go.Figure:
     X, Y, Z = build_smooth_iv_surface(plane_df)
     fig = go.Figure()
@@ -2313,9 +2287,7 @@ def make_figure(plane_df: pd.DataFrame, faint_df: pd.DataFrame, spot: float, tic
     return fig
 
 
-# ============================================================
-# SUMMARY
-# ============================================================
+# Console summary
 def print_summary(raw_df: pd.DataFrame, all_df: pd.DataFrame, plane_df: pd.DataFrame, faint_df: pd.DataFrame, spot: float, ticker_symbol: str, max_dte: int, slice_expiration: str) -> None:
     print("=" * 100)
     print(f"APPLICATION: {APP_NAME}")
@@ -2369,9 +2341,7 @@ def print_summary(raw_df: pd.DataFrame, all_df: pd.DataFrame, plane_df: pd.DataF
     print("=" * 100)
 
 
-# ============================================================
-# DOUBLE-CLICK / EXIT HELPERS
-# ============================================================
+# Output and exit helpers
 def safe_input(prompt: str) -> str:
     try:
         return input(prompt)
@@ -2389,10 +2359,7 @@ def pause_before_exit() -> None:
 
 
 def safe_write_html(fig, path: Path, auto_open: bool = False, label: str = "HTML") -> Path:
-    """
-    Save a full-page responsive HTML so the chart fills the browser window with less clutter.
-    Falls back to a timestamped filename if the target file is locked.
-    """
+    """Save a Plotly chart as a browser-friendly HTML file."""
     import webbrowser
 
     html_fragment = fig.to_html(
@@ -2480,9 +2447,7 @@ def export_diagnostic_csvs(all_df: pd.DataFrame, plane_df: pd.DataFrame, faint_d
     print(f"Saved residual outliers CSV: {faint_path.resolve()}")
 
 
-# ============================================================
-# MAIN
-# ============================================================
+# Main run
 def main() -> None:
     global OPTION_SIDE, LIVE_TREASURY_INFO, FITTED_MODELS
     ticker_symbol, max_dte, slice_target, option_side, surface_preset = get_inputs_from_user()
